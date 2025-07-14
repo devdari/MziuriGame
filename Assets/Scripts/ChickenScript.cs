@@ -118,6 +118,12 @@ public class ChickenScript : MonoBehaviour
             Destroy(gameObject);
             gameOver.SetActive(true);
         }
+
+        if (collision.gameObject.name == "snowball(Clone)")
+        {            
+            Destroy(gameObject);
+            gameOver.SetActive(true);
+        }
     }
 
     private void OnTriggerEnter2D(Collider2D collision)

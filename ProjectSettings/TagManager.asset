@@ -15,6 +15,8 @@ TagManager:
   - elevator
   - lever
   - spiderden
+  - shieldpotion
+  - snowman
   layers:
   - Default
   - TransparentFX
@@ -22,8 +24,8 @@ TagManager:
   - Ground
   - Water
   - UI
-  - 
-  - 
+  - Player
+  - Goblin
   - 
   - 
   - 

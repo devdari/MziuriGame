@@ -19,10 +19,15 @@ public class PlayerScript : MonoBehaviour
     [Header("Player Health")]
     [Space(5)]
     public float health;
+    public Image[] hearts;
+    public Sprite heartFill;
+    public Sprite heartEmpty;
     public Text healthText;
     public static bool isAlive = true;
     public Slider staminaBar;
     public float staminaSpeed;
+    public GameObject shield;
+    bool shieldActive;
 
 
     [Header("Player Components")]
@@ -87,6 +92,8 @@ public class PlayerScript : MonoBehaviour
     [Header("Player Checkpoints")]
     [Space(5)]
     public Transform checkpoint1;
+    public Transform checkpoint2;
+
 
 
 
@@ -348,19 +355,41 @@ public class PlayerScript : MonoBehaviour
         }
     }
 
-    void PlayerDamage(float damageAmount)
+
+    void HeartsUpdate()
     {
-        health -= damageAmount; //პერსონაჟს აკლებს სიცოცხლეს
-        healthText.text = health.ToString(); //პერსონაჟის სიცოცხლე აისახება ტექსტში
-        if (health <= 0 & isAlive) //ამოწმებს სიცოცხლის რაოდენობას
-        {            
-            isAlive = false; //პერსონაჟი ცოცხალი აღარ არის
-            anim.SetBool("jump", false);
-            anim.SetBool("run", false);
-            anim.SetTrigger("die"); //სიკვდილი
-            ChickenPlay(); //ქათამი იწყებს მოღვაწეობას
-            this.enabled = false;
+        for (int i = 0; i < hearts.Length; i++)
+        {
+            if (i < health)
+            {
+                hearts[i].sprite = heartFill;
+            }
+            else
+            {
+                hearts[i].sprite = heartEmpty;
+            }
         }
+    }
+
+    public void PlayerDamage(float damageAmount)
+    {
+        if(health > 0 & !shieldActive & isAlive)
+        {
+            health -= damageAmount; //პერსონაჟს აკლებს სიცოცხლეს
+            healthText.text = health.ToString(); //პერსონაჟის სიცოცხლე აისახება ტექსტში
+            HeartsUpdate();
+            if (health <= 0 & isAlive) //ამოწმებს სიცოცხლის რაოდენობას
+            {
+                
+                isAlive = false; //პერსონაჟი ცოცხალი აღარ არის
+                anim.SetBool("jump", false);
+                anim.SetBool("run", false);
+                anim.SetTrigger("die"); //სიკვდილი
+                ChickenPlay(); //ქათამი იწყებს მოღვაწეობას
+                //this.enabled = false;
+            }
+        }
+        
     }
 
     void ChickenPlay()
@@ -397,6 +426,7 @@ public class PlayerScript : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        HeartsUpdate();
         arrow = 100;
         arrowText.text = arrow.ToString();
         if(PlayerPrefs.GetString("HaveBow") == "True")
@@ -423,10 +453,31 @@ public class PlayerScript : MonoBehaviour
             coinText.text = coinCount.ToString();
         }
 
+        MapCheckpointsScript checkpointsScript = FindObjectOfType<MapCheckpointsScript>();
+
+
         if(PlayerPrefs.GetFloat("checkpoint") == 1)
         {
             transform.position = checkpoint1.position;
         }
+        else if (PlayerPrefs.GetFloat("checkpoint") == 2)
+        {
+            transform.position = checkpoint2.position;
+        }
+
+        if(checkpointsScript != null)
+        {
+            if (checkpointsScript.checkpoint == 1 & ChangeSceneScript.sceneName == "Menu")
+            {
+                transform.position = checkpoint1.position;
+            }
+            else if (checkpointsScript.checkpoint == 2 & ChangeSceneScript.sceneName == "Menu")
+            {
+                transform.position = checkpoint2.position;
+            }
+        }
+
+      
 
         isAlive = true;
         healthText.text = health.ToString();   //პერსონაჟის სიცოცხლე აისახება ტექსტში     
@@ -444,6 +495,11 @@ public class PlayerScript : MonoBehaviour
             PlayerStamina();
             PlayerClimb();
         }
+        else if(!isAlive & jumpCount == 2)
+        {          
+            rb.bodyType = RigidbodyType2D.Static;
+            GetComponent<BoxCollider2D>().enabled = false;
+        }
        
         
     }
@@ -458,6 +514,16 @@ public class PlayerScript : MonoBehaviour
         merchantText.GetComponent<TMP_Text>().text = "Just Press E..";
         merchantRange = true;
     }
+
+    IEnumerator ShieldShow() //ფარის გაჩენა-გაქრობა
+    {
+        shieldActive = true;
+        shield.SetActive(true);
+        yield return new WaitForSeconds(5);
+        shieldActive = false;
+        shield.SetActive(false);
+    }
+
 
     //ხვდება ობიექტებთან დაჯახებას
     private void OnCollisionEnter2D(Collision2D collision)
@@ -494,6 +560,18 @@ public class PlayerScript : MonoBehaviour
         if (collision.gameObject.tag == "elevator")
         {
             transform.parent = collision.transform;
+        }
+
+        if (collision.gameObject.name == "snowball(Clone)")
+        {
+            Destroy(collision.gameObject);
+            PlayerDamage(1);
+        }
+
+        if (collision.gameObject.tag == "shieldpotion")
+        {
+            Destroy(collision.gameObject);
+            StartCoroutine(ShieldShow());
         }
     }
 
@@ -534,6 +612,12 @@ public class PlayerScript : MonoBehaviour
         {
             collision.GetComponent<Animator>().Play("checkpoint");
             PlayerPrefs.SetFloat("checkpoint", 1);
+        }
+
+        if (collision.gameObject.name == "checkpoint2")
+        {
+            collision.GetComponent<Animator>().Play("checkpoint");
+            PlayerPrefs.SetFloat("checkpoint", 2);
         }
 
         if (collision.gameObject.name == "death")
